@@ -13,7 +13,7 @@ on:
 env:
   AZURE_WEBAPP_NAME: 'blessed-sitecontainers-workflow'
   AZURE_WEBAPP_SLOT_NAME: 'Production'
-  CONTAINER_REGISTRY: 'sitecontainerssampleacr.azurecr.io'
+  CONTAINER_REGISTRY: ${{ secrets.CONTAINER_REGISTRY }}
 
 jobs:
   build:
