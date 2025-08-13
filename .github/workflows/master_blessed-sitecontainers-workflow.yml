@@ -24,37 +24,25 @@ jobs:
         with:
           python-version: '3.12'
       
-      - name: Change to app directory
-        run: |
-          cd router-app
-          echo "Current directory:"
-          pwd
-          echo "Files in directory:"
-          ls -la
-      
+
       - name: Create and start virtual environment
+        working-directory: router-app
         run: |
           python -m venv venv
           source venv/bin/activate
       
       - name: Install dependencies
+        working-directory: router-app
         run: |
-          echo "Current directory:"
-          pwd
-          echo "Files in directory:"
-          ls -la
           pip install -r requirements.txt
-
-      - name: Return to parent directory
-        run: cd ..
 
       - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v4
         with:
           name: python-app
           path: |
-            .
-            !venv/
+            router-app
+            !router-app/venv/
 
   deploy:
     runs-on: ubuntu-latest
