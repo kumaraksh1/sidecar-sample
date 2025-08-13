@@ -25,6 +25,12 @@ jobs:
           python-version: '3.12'
       
       - name: Change to app directory
+        run: |
+          cd router-app
+          echo "Current directory:"
+          pwd
+          echo "Files in directory:"
+          ls -la
         run: cd router-app
       
       - name: Create and start virtual environment
