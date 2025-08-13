@@ -31,7 +31,6 @@ jobs:
           pwd
           echo "Files in directory:"
           ls -la
-        run: cd router-app
       
       - name: Create and start virtual environment
         run: |
