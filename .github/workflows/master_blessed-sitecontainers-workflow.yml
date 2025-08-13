@@ -38,7 +38,12 @@ jobs:
           source venv/bin/activate
       
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          echo "Current directory:"
+          pwd
+          echo "Files in directory:"
+          ls -la
+          pip install -r requirements.txt
 
       - name: Return to parent directory
         run: cd ..
