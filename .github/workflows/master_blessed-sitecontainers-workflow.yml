@@ -10,6 +10,10 @@ on:
       - master
   workflow_dispatch:
 
+env:
+  AZURE_WEBAPP_NAME: 'blessed-sitecontainers-workflow'
+  AZURE_WEBAPP_SLOT_NAME: 'Production'
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -68,5 +72,5 @@ jobs:
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
-          app-name: 'blessed-sitecontainers-workflow'
-          slot-name: 'Production'
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          slot-name: ${{ env.AZURE_WEBAPP_SLOT_NAME }}
