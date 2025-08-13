@@ -13,6 +13,7 @@ on:
 env:
   AZURE_WEBAPP_NAME: 'blessed-sitecontainers-workflow'
   AZURE_WEBAPP_SLOT_NAME: 'Production'
+  CONTAINER_REGISTRY: 'sitecontainerssampleacr.azurecr.io'
 
 jobs:
   build:
@@ -21,6 +22,7 @@ jobs:
       contents: read #This is required for actions/checkout
 
     steps:
+      # Steps to build and upload artifacts for python app.
       - uses: actions/checkout@v4
 
       - name: Set up Python version
@@ -47,6 +49,22 @@ jobs:
           path: |
             router-app
             !router-app/venv/
+      
+      # Steps to build and push Sidecar container image to Azure Container Registry.
+      - name: Log in to Azure Container Registry
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ env.CONTAINER_REGISTRY }}
+          username: ${{ secrets.AZURE_CONTAINER_REGISTRY_USERNAME }}
+          password: ${{ secrets.AZURE_CONTAINER_REGISTRY_PASSWORD }}
+
+      - name: Build and push container hello-app image to registry
+        uses: docker/build-push-action@v3
+        with:
+          context: ./hello-app
+          push: true
+          tags: ${{ env.CONTAINER_REGISTRY }}/test/hello-app:${{ github.sha }}
+          file: ./hello-app/Dockerfile
 
   deploy:
     runs-on: ubuntu-latest
@@ -74,3 +92,12 @@ jobs:
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           slot-name: ${{ env.AZURE_WEBAPP_SLOT_NAME }}
+          sitecontainers-config: >-
+            [
+              {
+                "name": "hello-app",
+                "image": "${{ env.CONTAINER_REGISTRY }}/test/hello-app:${{ github.sha }}",
+                "targetPort": 5001,
+                "isMain": false
+              }
+            ]
