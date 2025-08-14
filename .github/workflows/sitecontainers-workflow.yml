@@ -1,0 +1,89 @@
+# This GitHub Actions workflow builds and deploys site containers to an Azure Web App.
+# It builds two containers (router-app and hello-app) and pushes them to a container registry
+
+name: Build and deploy site container app to Azure Web App
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  AZURE_WEBAPP_NAME: 'sitecontainers-sample-workflow' # Replace with your Azure Web App name
+  CONTAINER_REGISTRY: ${{ secrets.CONTAINER_REGISTRY }} # Set secret with Container Registry URL, example : xyz.azurecr.io
+  AZURE_WEBAPP_SLOT_NAME: 'Production' # Replace with your Azure Web App slot name, if applicable
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read #This is required for actions/checkout
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to Azure Container Registry
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ env.CONTAINER_REGISTRY }}
+          username: ${{ secrets.AZURE_CONTAINER_REGISTRY_USERNAME }}
+          password: ${{ secrets.AZURE_CONTAINER_REGISTRY_PASSWORD }}
+
+      # Mention all the containers one by one you want to build and push
+      - name: Build and push container router-app image to registry # This is the first container (main container)
+        uses: docker/build-push-action@v3
+        with:
+          context: ./router-app # Path to the context for container 1, in this case, router-app
+          push: true
+          tags: ${{ env.CONTAINER_REGISTRY }}/test/router-app:${{ github.sha }} # Use the sha of the commit as the tag, specify the image name
+          file: ./router-app/Dockerfile # Path to the Dockerfile for container 1
+
+      - name: Build and push container hello-app image to registry # This is the second container (secondary container)
+        uses: docker/build-push-action@v3
+        with:
+          context: ./hello-app # Path to the context for container 2, in this case, hello-app
+          push: true
+          tags: ${{ env.CONTAINER_REGISTRY }}/test/hello-app:${{ github.sha }} # Use the sha of the commit as the tag, specify the image name
+          file: ./hello-app/Dockerfile # Path to the Dockerfile for container 2
+
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write #This is required for requesting the JWT
+      contents: read #This is required for actions/checkout
+
+    needs: build
+
+    steps:
+      
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_ONLYCONTAINERID }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_CF502E393C854DA1B23267120C36D934 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_196FB606BC0046998790AD6BF8BD6D7E }}
+
+      - name: Deploy to Azure Web App
+        id: deploy-to-webapp
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          slot-name: ${{ env.AZURE_WEBAPP_SLOT_NAME }}
+          # Mention properties for the containers one by one in a list of json objects
+          sitecontainers-config: >-
+            [
+            {
+                "name": "main",
+                "image": "${{ env.CONTAINER_REGISTRY }}/test/router-app:${{ github.sha }}",
+                "targetPort": 5000,
+                "isMain": true
+              },
+              {
+                "name": "hello-app",
+                "image": "${{ env.CONTAINER_REGISTRY }}/test/hello-app:${{ github.sha }}",
+                "targetPort": 5001,
+                "isMain": false
+              }
+            ]
